@@ -1,0 +1,15 @@
+version: "2"
+
+services:
+  vault_server:
+    networks:
+      - develop
+    image: "cypherhat/pillbox:latest"
+    ports:
+      - "9200:9200"
+    volumes:
+      - "./config:/home/vault/config:rw"
+    entrypoint: /home/vault/config/entrypoint.sh
+networks:
+  develop:
+    driver: bridge

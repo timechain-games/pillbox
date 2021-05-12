@@ -1,2 +1,1 @@
-# pillbox
-Pillbox is a secure on-ramp to the Solana ecosystem.
+# Pillbox Plugin v0.3.0
