@@ -1,3 +1,6 @@
+// I am attempting to translate this
+// https://github.com/CriesofCarrots/ed25519-dalek-bip32/blob/main/src/lib.rs
+
 package util
 
 import (
