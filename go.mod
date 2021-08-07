@@ -6,9 +6,11 @@ require (
 	github.com/cosmos/cosmos-sdk v0.42.9
 	github.com/ethereum/go-ethereum v1.10.6
 	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/vault/api v1.1.1 // indirect
+	github.com/hashicorp/vault/api v1.1.1
 	github.com/hashicorp/vault/sdk v0.2.1
+	github.com/tendermint/tendermint v0.34.11 
 	github.com/timechain-games/pillbox v0.0.0-20210515145007-8f48169333ff
+
 )
 
 replace google.golang.org/grpc => google.golang.org/grpc v1.33.2

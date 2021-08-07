@@ -23,13 +23,19 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/timechain-games/pillbox/util"
 )
 
 type Account struct {
+	PrivateKey  ed25519.PrivKey
 	BIP44Params hd.BIP44Params
 	Algorithm   hd.PubKeyType
 	Mnemonic    string
+}
+
+func Address(account *Account) string {
+	return account.PrivateKey.PubKey().Address().String()
 }
 
 // ConfigJSON contains the configuration for each mount
