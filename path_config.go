@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -25,12 +26,10 @@ import (
 	"github.com/timechain-games/pillbox/util"
 )
 
-// SolanaAddress is a place holder
-type SolanaAddress struct {
-}
-
-func (address *SolanaAddress) String() string {
-	return ""
+type Account struct {
+	BIP44Params hd.BIP44Params
+	Algorithm   hd.PubKeyType
+	Mnemonic    string
 }
 
 // ConfigJSON contains the configuration for each mount
@@ -42,14 +41,14 @@ type ConfigJSON struct {
 }
 
 // ValidAddress returns an error if the address is not included or if it is excluded
-func (config *ConfigJSON) ValidAddress(toAddress SolanaAddress) error {
+func (config *ConfigJSON) ValidAddress(toAddress string) error {
 
-	if util.Contains(config.Exclusions, toAddress.String()) {
-		return fmt.Errorf("%s is excludeded by this mount", toAddress.String())
+	if util.Contains(config.Exclusions, toAddress) {
+		return fmt.Errorf("%s is excludeded by this mount", toAddress)
 	}
 
-	if len(config.Inclusions) > 0 && !util.Contains(config.Inclusions, toAddress.String()) {
-		return fmt.Errorf("%s is not in the set of inclusions of this mount", toAddress.String())
+	if len(config.Inclusions) > 0 && !util.Contains(config.Inclusions, toAddress) {
+		return fmt.Errorf("%s is not in the set of inclusions of this mount", toAddress)
 	}
 	return nil
 }
