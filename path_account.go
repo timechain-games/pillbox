@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/cosmos/go-bip39"
+	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/tendermint/tendermint/crypto/ed25519"
@@ -45,6 +47,10 @@ type AccountJSON struct {
 	Inclusions []string        `json:"inclusions"`
 	Exclusions []string        `json:"exclusions"`
 	PrivateKey ed25519.PrivKey `json:"private-key"`
+}
+
+func (accountJSON *AccountJSON) PubKey() solana.PublicKey {
+	return solana.PublicKeyFromBytes(accountJSON.PrivateKey.PubKey().Bytes())
 }
 
 func accountPaths(b *PluginBackend) []*framework.Path {
@@ -105,6 +111,24 @@ func accountPaths(b *PluginBackend) []*framework.Path {
 				},
 			},
 		},
+		{
+			Pattern: QualifiedPath("accounts/"+framework.GenericNameRegex("name")) + "/airdrop",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: b.pathAccountsAirdrop,
+			},
+			HelpSynopsis: "TESTING ONLY: Airdrop from testnet.",
+			HelpDescription: `
+			TESTING ONLY: Airdrop from testnet.
+			`,
+			Fields: map[string]*framework.FieldSchema{
+				"name": {Type: framework.TypeString},
+				"lamports": {
+					Type:        framework.TypeInt64,
+					Default:     LAMPORTS_PER_SOL,
+					Description: "The data (base64 encoded) to sign.",
+				},
+			},
+		},
 	}
 }
 
@@ -130,6 +154,7 @@ func (b *PluginBackend) pathAccountsList(ctx context.Context, req *logical.Reque
 	}
 	return logical.ListResponse(vals), nil
 }
+
 func readAccount(ctx context.Context, req *logical.Request, name string) (*AccountJSON, error) {
 	path := QualifiedPath(fmt.Sprintf("accounts/%s", name))
 	entry, err := req.Storage.Get(ctx, path)
@@ -168,7 +193,7 @@ func (b *PluginBackend) pathAccountsRead(ctx context.Context, req *logical.Reque
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"address":    accountJSON.PrivateKey.PubKey().Address(),
+			"address":    accountJSON.PubKey(),
 			"inclusions": accountJSON.Inclusions,
 			"exclusions": accountJSON.Exclusions,
 		},
@@ -244,7 +269,7 @@ func (b *PluginBackend) pathAccountUpdate(ctx context.Context, req *logical.Requ
 	if isNew {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"address":    accountJSON.PrivateKey.PubKey().Address(),
+				"address":    accountJSON.PubKey(),
 				"mnemonic":   accountJSON.Mnemonic,
 				"inclusions": accountJSON.Inclusions,
 				"exclusions": accountJSON.Exclusions,
@@ -253,7 +278,7 @@ func (b *PluginBackend) pathAccountUpdate(ctx context.Context, req *logical.Requ
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"address":    accountJSON.PrivateKey.PubKey().Address(),
+			"address":    accountJSON.PubKey(),
 			"inclusions": accountJSON.Inclusions,
 			"exclusions": accountJSON.Exclusions,
 		},
@@ -286,9 +311,45 @@ func (b *PluginBackend) pathAccountsSign(ctx context.Context, req *logical.Reque
 	encodedSignedData := base64.StdEncoding.EncodeToString(signedData)
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"address": accountJSON.PrivateKey.PubKey().Address(),
+			"address": accountJSON.PubKey(),
 			"signed":  encodedSignedData,
 		},
 	}, nil
 
+}
+
+func (b *PluginBackend) pathAccountsAirdrop(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config, err := b.configured(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	name := data.Get("name").(string)
+
+	accountJSON, err := readAccount(ctx, req, name)
+	if err != nil || accountJSON == nil {
+		return nil, err
+	}
+	// Create a new account:
+	account := solana.NewAccount()
+	fmt.Println("account private key:", account.PrivateKey)
+	fmt.Println("account public key:", account.PublicKey())
+
+	// Create a new RPC client:
+	client := rpc.NewClient(config.getRPCURL())
+	// Airdrop 1 sol to the new account:
+	signedTx, err := client.RequestAirdrop(
+		ctx,
+		solana.PublicKeyFromBytes(accountJSON.PrivateKey.PubKey().Bytes()),
+		LAMPORTS_PER_SOL,
+		"",
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"address":   accountJSON.PubKey(),
+			"signed-tx": signedTx.String(),
+		},
+	}, nil
 }

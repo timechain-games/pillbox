@@ -6,6 +6,7 @@ require (
 	github.com/armon/go-metrics v0.3.8 // indirect
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/ethereum/go-ethereum v1.10.6
+	github.com/gagliardetto/solana-go v1.0.0
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/vault/api v1.1.1
 	github.com/hashicorp/vault/sdk v0.2.1
@@ -13,7 +14,6 @@ require (
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/tendermint/tendermint v0.34.11
 	github.com/timechain-games/pillbox v0.0.0-20210515145007-8f48169333ff
-	golang.org/x/sys v0.0.0-20210510120138-977fb7262007 // indirect
 	google.golang.org/genproto v0.0.0-20210114201628-6edceaf6022f // indirect
 
 )

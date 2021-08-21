@@ -24,6 +24,36 @@ import (
 	"github.com/timechain-games/pillbox/util"
 )
 
+const (
+	protocolHTTPS = "https://"
+	protocolWSS   = "wss://"
+)
+
+const (
+	hostDevNet           = "api.devnet.solana.com"
+	hostTestNet          = "api.testnet.solana.com"
+	hostMainNetBeta      = "api.mainnet-beta.solana.com"
+	hostMainNetBetaSerum = "solana-api.projectserum.com"
+)
+
+const (
+	DevNet_RPC           = protocolHTTPS + hostDevNet
+	TestNet_RPC          = protocolHTTPS + hostTestNet
+	MainNetBeta_RPC      = protocolHTTPS + hostMainNetBeta
+	MainNetBetaSerum_RPC = protocolHTTPS + hostMainNetBetaSerum
+)
+
+const (
+	DevNet_WS           = protocolWSS + hostDevNet
+	TestNet_WS          = protocolWSS + hostTestNet
+	MainNetBeta_WS      = protocolWSS + hostMainNetBeta
+	MainNetBetaSerum_WS = protocolWSS + hostMainNetBetaSerum
+)
+
+const (
+	LAMPORTS_PER_SOL uint64 = 1000000000
+)
+
 // ConfigJSON contains the configuration for each mount
 type ConfigJSON struct {
 	BoundCIDRList []string `json:"bound_cidr_list_list" structs:"bound_cidr_list" mapstructure:"bound_cidr_list"`
@@ -61,6 +91,7 @@ func configPaths(b *PluginBackend) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"rpc_url": {
 					Type:        framework.TypeString,
+					Default:     TestNet_RPC,
 					Description: "The RPC address of the Solana node",
 				},
 				"inclusions": {
@@ -171,7 +202,7 @@ func (b *PluginBackend) readConfig(ctx context.Context, s logical.Storage) (*Con
 
 func (b *PluginBackend) configured(ctx context.Context, req *logical.Request) (*ConfigJSON, error) {
 	config, err := b.readConfig(ctx, req.Storage)
-	if err != nil {
+	if err != nil && config.getRPCURL() == Empty {
 		return nil, err
 	}
 	if validConnection, err := b.validIPConstraints(config, req); !validConnection {
