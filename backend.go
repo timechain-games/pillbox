@@ -55,6 +55,7 @@ func Backend(conf *logical.BackendConfig) (*PluginBackend, error) {
 		Help: "",
 		Paths: framework.PathAppend(
 			configPaths(&b),
+			accountPaths(&b),
 		),
 		Secrets:     []*framework.Secret{},
 		BackendType: logical.TypeLogical,
@@ -65,4 +66,9 @@ func Backend(conf *logical.BackendConfig) (*PluginBackend, error) {
 // PluginBackend implements the Backend for this plugin
 type PluginBackend struct {
 	*framework.Backend
+}
+
+// QualifiedPath prepends the token symbol to the path
+func QualifiedPath(subpath string) string {
+	return subpath
 }

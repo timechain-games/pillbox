@@ -18,25 +18,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/timechain-games/pillbox/util"
 )
-
-type Account struct {
-	PrivateKey  ed25519.PrivKey
-	BIP44Params hd.BIP44Params
-	Algorithm   hd.PubKeyType
-	Mnemonic    string
-}
-
-func Address(account *Account) string {
-	return account.PrivateKey.PubKey().Address().String()
-}
 
 // ConfigJSON contains the configuration for each mount
 type ConfigJSON struct {
@@ -203,7 +189,7 @@ func (b *PluginBackend) validIPConstraints(config *ConfigJSON, req *logical.Requ
 
 		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, config.BoundCIDRList)
 		if err != nil {
-			return false, errwrap.Wrapf("failed to verify the CIDR restrictions set on the role: {{err}}", err)
+			return false, fmt.Errorf("failed to verify the CIDR restrictions set on the role: %s", err)
 		}
 		if !belongs {
 			return false, fmt.Errorf("source address %q unauthorized through CIDR restrictions on the role", req.Connection.RemoteAddr)
