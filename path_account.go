@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -65,9 +66,9 @@ func accountPaths(b *PluginBackend) []*framework.Path {
 				logical.UpdateOperation: b.pathAccountUpdate,
 				logical.DeleteOperation: b.pathAccountsDelete,
 			},
-			HelpSynopsis: "Configure the Pillbox plugin.",
+			HelpSynopsis: "Create and read accounts.",
 			HelpDescription: `
-			Configure the Pillbox plugin.
+			Create and read accounts.
 			`,
 			Fields: map[string]*framework.FieldSchema{
 				"name": {Type: framework.TypeString},
@@ -83,6 +84,24 @@ func accountPaths(b *PluginBackend) []*framework.Path {
 				"exclusions": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: "These accounts can never be transacted with",
+				},
+			},
+		},
+		{
+			Pattern: QualifiedPath("accounts/"+framework.GenericNameRegex("name")) + "/sign",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: b.pathAccountsSign,
+			},
+			HelpSynopsis: "Sign base64 encoded data.",
+			HelpDescription: `
+			Sign base64 encoded data.
+			`,
+			Fields: map[string]*framework.FieldSchema{
+				"name": {Type: framework.TypeString},
+				"data": {
+					Type:        framework.TypeString,
+					Default:     Empty,
+					Description: "The data (base64 encoded) to sign.",
 				},
 			},
 		},
@@ -237,6 +256,38 @@ func (b *PluginBackend) pathAccountUpdate(ctx context.Context, req *logical.Requ
 			"address":    accountJSON.PrivateKey.PubKey().Address(),
 			"inclusions": accountJSON.Inclusions,
 			"exclusions": accountJSON.Exclusions,
+		},
+	}, nil
+
+}
+
+func (b *PluginBackend) pathAccountsSign(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	_, err := b.configured(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	name := data.Get("name").(string)
+	encodedData := data.Get("data").(string)
+
+	accountJSON, err := readAccount(ctx, req, name)
+	if err != nil || accountJSON == nil {
+		return nil, err
+	}
+
+	decodedData, err := base64.StdEncoding.DecodeString(encodedData)
+	if err != nil {
+		return nil, err
+	}
+
+	signedData, err := accountJSON.PrivateKey.Sign(decodedData)
+	if err != nil {
+		return nil, err
+	}
+	encodedSignedData := base64.StdEncoding.EncodeToString(signedData)
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"address": accountJSON.PrivateKey.PubKey().Address(),
+			"signed":  encodedSignedData,
 		},
 	}, nil
 
