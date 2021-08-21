@@ -112,6 +112,24 @@ func accountPaths(b *PluginBackend) []*framework.Path {
 			},
 		},
 		{
+			Pattern: QualifiedPath("accounts/"+framework.GenericNameRegex("name")) + "/balance",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: b.pathAccountsBalance,
+			},
+			HelpSynopsis: "Sign base64 encoded data.",
+			HelpDescription: `
+			Sign base64 encoded data.
+			`,
+			Fields: map[string]*framework.FieldSchema{
+				"name": {Type: framework.TypeString},
+				"commitment": {
+					Type:        framework.TypeString,
+					Default:     rpc.CommitmentRecent,
+					Description: "The commitment type",
+				},
+			},
+		},
+		{
 			Pattern: QualifiedPath("accounts/"+framework.GenericNameRegex("name")) + "/airdrop",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.pathAccountsAirdrop,
@@ -329,11 +347,6 @@ func (b *PluginBackend) pathAccountsAirdrop(ctx context.Context, req *logical.Re
 	if err != nil || accountJSON == nil {
 		return nil, err
 	}
-	// Create a new account:
-	account := solana.NewAccount()
-	fmt.Println("account private key:", account.PrivateKey)
-	fmt.Println("account public key:", account.PublicKey())
-
 	// Create a new RPC client:
 	client := rpc.NewClient(config.getRPCURL())
 	// Airdrop 1 sol to the new account:
@@ -350,6 +363,37 @@ func (b *PluginBackend) pathAccountsAirdrop(ctx context.Context, req *logical.Re
 		Data: map[string]interface{}{
 			"address":   accountJSON.PubKey(),
 			"signed-tx": signedTx.String(),
+		},
+	}, nil
+}
+
+func (b *PluginBackend) pathAccountsBalance(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config, err := b.configured(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	name := data.Get("name").(string)
+
+	accountJSON, err := readAccount(ctx, req, name)
+	if err != nil || accountJSON == nil {
+		return nil, err
+	}
+
+	// Create a new RPC client:
+	client := rpc.NewClient(config.getRPCURL())
+	// Airdrop 1 sol to the new account:
+	result, err := client.GetBalance(
+		ctx,
+		solana.PublicKeyFromBytes(accountJSON.PrivateKey.PubKey().Bytes()),
+		rpc.CommitmentRecent,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"address": accountJSON.PubKey(),
+			"balance": result.Value,
 		},
 	}, nil
 }
